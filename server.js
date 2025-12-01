@@ -3,7 +3,7 @@ const app = express();
 const port = 3000;
 
 app.get("/", (req, res) => {
-  res.send("🚀 Node.js CI/CD deployment successful!");
+  res.send("nodejs project developed  by supriya rupnar");
 });
 
 app.listen(port, () => {
