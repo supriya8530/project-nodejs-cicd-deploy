@@ -1,4 +1,4 @@
-name: Node.js CI/CD Deployment
+name: CI/CD Kubernetes Deploy
 
 on:
   push:
@@ -6,41 +6,34 @@ on:
       - main
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+      - name: Build Docker image
+        run: docker build -t nodejs-cicd:v1 .
 
-      - name: Install dependencies
-        run: npm install
+      - name: Save image to file
+        run: docker save nodejs-cicd:v1 -o image.tar
 
-      - name: Run tests
-        run: echo "No tests"
-
-      - name: Copy files to EC2
+      - name: Copy image to Kubernetes node
         uses: appleboy/scp-action@v0.1.4
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.K8S_HOST }}
           username: ubuntu
-          key: ${{ secrets.EC2_KEY }}
-          source: "."
-          target: "/home/ubuntu/app"
+          key: ${{ secrets.K8S_KEY }}
+          source: "image.tar"
+          target: "/home/ubuntu/"
 
-      - name: Run app on EC2
+      - name: Load & Deploy
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ secrets.K8S_HOST }}
           username: ubuntu
-          key: ${{ secrets.EC2_KEY }}
+          key: ${{ secrets.K8S_KEY }}
           script: |
-            cd /home/ubuntu/app
-            npm install
-            pm2 stop all || true
-            pm2 start server.js
+            docker load -i image.tar
+            kubectl apply -f /home/ubuntu/k8s/
